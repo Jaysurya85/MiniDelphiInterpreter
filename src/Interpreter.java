@@ -6,6 +6,7 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
     private Map<String, ClassDef> classes = new HashMap<>();
     private ObjectInstance currentObject = null;
 
+    // ================= ASSIGNMENT =================
     @Override
     public Object visitAssignment(DelphiParser.AssignmentContext ctx) {
 
@@ -15,30 +16,39 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
 
             String varName = ctx.IDENTIFIER().getText();
 
-            // If normal variable
+            // Global variable
             if (memory.containsKey(varName)) {
                 memory.put(varName, value);
             }
-            // If inside constructor → field assignment
-            else if (currentObject != null) {
+            // Object field (inside constructor/destructor)
+            else if (currentObject != null &&
+                    currentObject.fields.containsKey(varName)) {
+
                 currentObject.fields.put(varName, (Integer) value);
             } else {
                 throw new RuntimeException("Unknown variable: " + varName);
             }
+
         } else {
-            // Field access p.age := ...
+            // Field access: p.age := ...
             DelphiParser.FieldAccessContext fieldCtx = ctx.fieldAccess();
 
             String objectName = fieldCtx.IDENTIFIER(0).getText();
             String fieldName = fieldCtx.IDENTIFIER(1).getText();
 
             ObjectInstance instance = (ObjectInstance) memory.get(objectName);
+
+            if (instance == null) {
+                throw new RuntimeException("Unknown object: " + objectName);
+            }
+
             instance.fields.put(fieldName, (Integer) value);
         }
 
         return null;
     }
 
+    // ================= FIELD ACCESS =================
     @Override
     public Object visitFieldAccess(DelphiParser.FieldAccessContext ctx) {
 
@@ -46,20 +56,35 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
         String fieldName = ctx.IDENTIFIER(1).getText();
 
         ObjectInstance instance = (ObjectInstance) memory.get(objectName);
+
+        if (instance == null) {
+            throw new RuntimeException("Unknown object: " + objectName);
+        }
+
         return instance.fields.get(fieldName);
     }
 
+    // ================= WRITELN =================
     @Override
     public Object visitWritelnStmt(DelphiParser.WritelnStmtContext ctx) {
+
         Object value = visit(ctx.expression());
-        if (value instanceof Integer) {
+
+        if (value == null) {
+            System.out.println("null");
+        } else if (value instanceof Integer) {
             System.out.println(value);
+        } else if (value instanceof ObjectInstance) {
+            System.out.println("Object of class: " +
+                    ((ObjectInstance) value).classDef.name);
         } else {
-            System.out.println("Object of class: " + ((ObjectInstance) value).classDef.name);
+            System.out.println(value);
         }
+
         return null;
     }
 
+    // ================= EXPRESSION =================
     @Override
     public Object visitExpression(DelphiParser.ExpressionContext ctx) {
 
@@ -68,32 +93,57 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
         }
 
         if (ctx.IDENTIFIER() != null) {
-            return memory.get(ctx.IDENTIFIER().getText());
+
+            String varName = ctx.IDENTIFIER().getText();
+
+            // 1️⃣ Global variable
+            if (memory.containsKey(varName)) {
+                return memory.get(varName);
+            }
+
+            // 2️⃣ Object field (constructor/destructor context)
+            if (currentObject != null &&
+                    currentObject.fields.containsKey(varName)) {
+
+                return currentObject.fields.get(varName);
+            }
+
+            throw new RuntimeException("Unknown variable: " + varName);
         }
+
         return visitChildren(ctx);
     }
 
+    // ================= CLASS DECLARATION =================
     @Override
     public Object visitClassDecl(DelphiParser.ClassDeclContext ctx) {
+
         String className = ctx.IDENTIFIER().getText();
 
         DelphiParser.ConstructorDeclContext constructor = ctx.classBody().constructorDecl();
+
+        DelphiParser.DestructorDeclContext destructor = ctx.classBody().destructorDecl();
+
         List<String> fields = new ArrayList<>();
 
         if (ctx.classBody().varDeclSection() != null) {
             for (DelphiParser.VarDeclContext varDecl : ctx.classBody().varDeclSection().varDecl()) {
 
-                String fieldName = varDecl.IDENTIFIER().getText();
-                fields.add(fieldName);
+                fields.add(varDecl.IDENTIFIER().getText());
             }
         }
 
-        ClassDef classDef = new ClassDef(className, fields, constructor);
+        ClassDef classDef = new ClassDef(className, fields,
+                constructor, destructor);
+
         classes.put(className, classDef);
+
         System.out.println("Registered class: " + className);
+
         return null;
     }
 
+    // ================= OBJECT CREATION =================
     @Override
     public Object visitObjectCreation(DelphiParser.ObjectCreationContext ctx) {
 
@@ -121,6 +171,7 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
         return instance;
     }
 
+    // ================= VARIABLE DECLARATION =================
     @Override
     public Object visitVarDecl(DelphiParser.VarDeclContext ctx) {
 
@@ -131,12 +182,43 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
             memory.put(varName, 0);
         } else {
             ClassDef classDef = classes.get(typeName);
+
             if (classDef == null) {
                 throw new RuntimeException("Unknown class: " + typeName);
             }
 
-            ObjectInstance instance = new ObjectInstance(classDef);
-            memory.put(varName, instance);
+            memory.put(varName, null); // will be assigned later
+        }
+
+        return null;
+    }
+
+    // ================= METHOD CALL (DESTRUCTOR) =================
+    @Override
+    public Object visitMethodCall(DelphiParser.MethodCallContext ctx) {
+
+        String objectName = ctx.IDENTIFIER(0).getText();
+        String methodName = ctx.IDENTIFIER(1).getText();
+
+        ObjectInstance instance = (ObjectInstance) memory.get(objectName);
+
+        if (instance == null) {
+            throw new RuntimeException("Unknown object: " + objectName);
+        }
+
+        ClassDef classDef = instance.classDef;
+
+        if (methodName.equals("Destroy")) {
+
+            if (classDef.destructor != null) {
+
+                ObjectInstance previous = currentObject;
+                currentObject = instance;
+
+                visit(classDef.destructor.block());
+
+                currentObject = previous;
+            }
         }
 
         return null;

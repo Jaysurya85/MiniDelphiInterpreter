@@ -1,7 +1,7 @@
 grammar Delphi;
 
 program
-    : classDecl* varDeclSection? block EOF
+    : classDecl* varDeclSection? block '.' EOF
     ;
 
 classDecl
@@ -9,7 +9,7 @@ classDecl
     ;
 
 classBody
-    : varDeclSection? constructorDecl?
+    : varDeclSection? constructorDecl? destructorDecl?
     ;
 
 constructorDecl
@@ -18,7 +18,17 @@ constructorDecl
       ';'
     ;
 
+destructorDecl
+    : 'destructor' IDENTIFIER '(' ')' ';'
+      block
+      ';'
+    ;
+
 objectCreation
+    : IDENTIFIER '.' IDENTIFIER '(' ')'
+    ;
+
+methodCall
     : IDENTIFIER '.' IDENTIFIER '(' ')'
     ;
 
@@ -36,12 +46,13 @@ typeName
     ;
 
 block
-    : 'begin' statement* 'end.'
+    : 'begin' statement* 'end'
     ;
 
 statement
     : assignment
     | writelnStmt
+    | methodCall ';'
     ;
 
 assignment
