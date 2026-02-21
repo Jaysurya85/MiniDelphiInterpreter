@@ -118,7 +118,11 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
     @Override
     public Object visitClassDecl(DelphiParser.ClassDeclContext ctx) {
 
-        String className = ctx.IDENTIFIER().getText();
+        String className = ctx.IDENTIFIER(0).getText();
+        String parentName = null;
+        if (ctx.IDENTIFIER().size() > 1) {
+            parentName = ctx.IDENTIFIER(1).getText();
+        }
 
         DelphiParser.ConstructorDeclContext constructor = ctx.classBody().constructorDecl();
 
@@ -134,16 +138,23 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
         }
 
         ClassDef classDef = new ClassDef(className, fields,
-                constructor, destructor);
+                constructor, destructor, parentName);
 
         classes.put(className, classDef);
 
+        if (parentName != null) {
+            ClassDef parentClass = classes.get(parentName);
+            if (parentClass == null) {
+                throw new RuntimeException(
+                        "Unknown parent class: " + parentName);
+            }
+            classDef.parent = parentClass;
+        }
         System.out.println("Registered class: " + className);
 
         return null;
     }
 
-    // ================= OBJECT CREATION =================
     @Override
     public Object visitObjectCreation(DelphiParser.ObjectCreationContext ctx) {
 
@@ -164,6 +175,16 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
             currentObject = instance;
 
             visit(classDef.constructor.block());
+
+            currentObject = previous;
+        }
+
+        if (classDef.parent != null && classDef.parent.constructor != null) {
+
+            ObjectInstance previous = currentObject;
+            currentObject = instance;
+
+            visit(classDef.parent.constructor.block());
 
             currentObject = previous;
         }

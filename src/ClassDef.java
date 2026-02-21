@@ -5,12 +5,19 @@ public class ClassDef {
 	public List<String> fields;
 	public DelphiParser.ConstructorDeclContext constructor;
 	public DelphiParser.DestructorDeclContext destructor;
+	public String parentName;
+	public ClassDef parent;
 
-	public ClassDef(String name, List<String> fields,
-			DelphiParser.ConstructorDeclContext constructor, DelphiParser.DestructorDeclContext destructor) {
+	public ClassDef(String name,
+			List<String> fields,
+			DelphiParser.ConstructorDeclContext constructor,
+			DelphiParser.DestructorDeclContext destructor,
+			String parentName) {
+
 		this.name = name;
 		this.fields = fields;
 		this.constructor = constructor;
 		this.destructor = destructor;
+		this.parentName = parentName;
 	}
 }

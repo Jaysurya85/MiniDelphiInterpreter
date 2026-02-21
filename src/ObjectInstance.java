@@ -9,9 +9,18 @@ public class ObjectInstance {
 	public ObjectInstance(ClassDef classDef) {
 		this.classDef = classDef;
 
-		// Initialize all fields to 0
-		for (String field : classDef.fields) {
+		initializeFields(classDef);
+	}
+
+	private void initializeFields(ClassDef def) {
+
+		if (def.parent != null) {
+			initializeFields(def.parent);
+		}
+
+		for (String field : def.fields) {
 			fields.put(field, 0);
 		}
 	}
+
 }

@@ -5,7 +5,8 @@ program
     ;
 
 classDecl
-    : 'class' IDENTIFIER 'begin' classBody 'end' ';'
+    : 'class' IDENTIFIER ('extends' IDENTIFIER)? 
+      'begin' classBody 'end' ';'
     ;
 
 classBody

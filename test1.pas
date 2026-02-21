@@ -6,16 +6,22 @@ begin
   begin
     age := 18;
   end;
+end;
 
-  destructor Destroy();
+class Student extends Person
+begin
+  var roll: integer;
+
+  constructor Create();
   begin
-    writeln(age);
+    roll := 10;
   end;
 end;
 
-var p: Person;
+var s: Student;
 
 begin
-  p := Person.Create();
-  p.Destroy();
+  s := Student.Create();
+  writeln(s.age);
+  writeln(s.roll);
 end.
