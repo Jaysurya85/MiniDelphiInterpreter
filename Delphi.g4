@@ -1,12 +1,17 @@
 grammar Delphi;
 
 program
-    : classDecl* varDeclSection? block '.' EOF
+    : interfaceDecl* classDecl* varDeclSection? block '.' EOF
     ;
 
 classDecl
-    : 'class' IDENTIFIER ('extends' IDENTIFIER)? 
-      'begin' classBody 'end' ';'
+    : 'class' className=IDENTIFIER
+      ('extends' parentName=IDENTIFIER)?
+      ('implements' interfaceName=IDENTIFIER)?
+      'begin'
+      classBody
+      'end'
+      ';'
     ;
 
 classBody

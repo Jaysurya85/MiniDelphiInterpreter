@@ -17,3 +17,11 @@ begin
     writeln(age);
   end;
 end;
+
+var
+  p: Person;
+
+begin
+   p := Person.Create();
+  p.show();
+end.

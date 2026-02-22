@@ -5,6 +5,7 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
     private Map<String, Object> memory = new HashMap<>();
     private Map<String, ClassDef> classes = new HashMap<>();
     private ObjectInstance currentObject = null;
+    private Map<String, InterfaceDef> interfaces = new HashMap<>();
 
     // ================= ASSIGNMENT =================
     @Override
@@ -118,11 +119,15 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
     @Override
     public Object visitClassDecl(DelphiParser.ClassDeclContext ctx) {
 
-        String className = ctx.IDENTIFIER(0).getText();
-        String parentName = null;
-        if (ctx.IDENTIFIER().size() > 1) {
-            parentName = ctx.IDENTIFIER(1).getText();
-        }
+        String className = ctx.className.getText();
+
+        String parentName = ctx.parentName != null
+                ? ctx.parentName.getText()
+                : null;
+
+        String interfaceName = ctx.interfaceName != null
+                ? ctx.interfaceName.getText()
+                : null;
 
         DelphiParser.ConstructorDeclContext constructor = ctx.classBody().constructorDecl();
 
@@ -138,23 +143,53 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
         }
 
         ClassDef classDef = new ClassDef(className, fields,
-                constructor, destructor, parentName);
+                constructor, destructor,
+                parentName, interfaceName);
 
         classes.put(className, classDef);
 
-        if (parentName != null) {
-            ClassDef parentClass = classes.get(parentName);
-            if (parentClass == null) {
-                throw new RuntimeException(
-                        "Unknown parent class: " + parentName);
-            }
-            classDef.parent = parentClass;
-        }
+        // 🔥 STORE METHODS HERE
         for (DelphiParser.ProcedureDeclContext proc : ctx.classBody().procedureDecl()) {
 
             String methodName = proc.IDENTIFIER().getText();
             classDef.methods.put(methodName, proc);
         }
+
+        // 🔹 Resolve parent
+        if (parentName != null) {
+
+            ClassDef parentClass = classes.get(parentName);
+
+            if (parentClass == null) {
+                throw new RuntimeException(
+                        "Unknown parent class: " + parentName);
+            }
+
+            classDef.parent = parentClass;
+        }
+
+        // 🔹 Validate interface
+        if (interfaceName != null) {
+
+            InterfaceDef interfaceDef = interfaces.get(interfaceName);
+
+            if (interfaceDef == null) {
+                throw new RuntimeException(
+                        "Unknown interface: " + interfaceName);
+            }
+
+            classDef.implementedInterface = interfaceDef;
+
+            for (String requiredMethod : interfaceDef.methodNames) {
+                if (!classDef.methods.containsKey(requiredMethod)) {
+                    throw new RuntimeException(
+                            "Class " + className +
+                                    " does not implement method: " +
+                                    requiredMethod);
+                }
+            }
+        }
+
         System.out.println("Registered class: " + className);
 
         return null;
@@ -268,6 +303,26 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
         visit(method.block());
 
         currentObject = previous;
+
+        return null;
+    }
+
+    @Override
+    public Object visitInterfaceDecl(DelphiParser.InterfaceDeclContext ctx) {
+
+        String interfaceName = ctx.IDENTIFIER().getText();
+
+        InterfaceDef interfaceDef = new InterfaceDef(interfaceName);
+
+        for (DelphiParser.ProcedureSignatureContext sig : ctx.interfaceBody().procedureSignature()) {
+
+            String methodName = sig.IDENTIFIER().getText();
+            interfaceDef.methodNames.add(methodName);
+        }
+
+        interfaces.put(interfaceName, interfaceDef);
+
+        System.out.println("Registered interface: " + interfaceName);
 
         return null;
     }
