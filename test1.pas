@@ -1,4 +1,9 @@
-class Person
+interface Printable
+begin
+  procedure show();
+end;
+
+class Person implements Printable
 begin
   var age: integer;
 
@@ -6,22 +11,9 @@ begin
   begin
     age := 18;
   end;
-end;
 
-class Student extends Person
-begin
-  var roll: integer;
-
-  constructor Create();
+  procedure show();
   begin
-    roll := 10;
+    writeln(age);
   end;
 end;
-
-var s: Student;
-
-begin
-  s := Student.Create();
-  writeln(s.age);
-  writeln(s.roll);
-end.

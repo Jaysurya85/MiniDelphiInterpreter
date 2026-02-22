@@ -150,6 +150,11 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
             }
             classDef.parent = parentClass;
         }
+        for (DelphiParser.ProcedureDeclContext proc : ctx.classBody().procedureDecl()) {
+
+            String methodName = proc.IDENTIFIER().getText();
+            classDef.methods.put(methodName, proc);
+        }
         System.out.println("Registered class: " + className);
 
         return null;
@@ -180,12 +185,9 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
         }
 
         if (classDef.parent != null && classDef.parent.constructor != null) {
-
             ObjectInstance previous = currentObject;
             currentObject = instance;
-
             visit(classDef.parent.constructor.block());
-
             currentObject = previous;
         }
 
@@ -229,6 +231,7 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
 
         ClassDef classDef = instance.classDef;
 
+        // Destructor case
         if (methodName.equals("Destroy")) {
 
             if (classDef.destructor != null) {
@@ -240,7 +243,31 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
 
                 currentObject = previous;
             }
+
+            return null;
         }
+
+        // Normal method lookup
+        DelphiParser.ProcedureDeclContext method = classDef.methods.get(methodName);
+
+        // Check parent if not found
+        ClassDef parent = classDef.parent;
+        while (method == null && parent != null) {
+            method = parent.methods.get(methodName);
+            parent = parent.parent;
+        }
+
+        if (method == null) {
+            throw new RuntimeException(
+                    "Method not found: " + methodName);
+        }
+
+        ObjectInstance previous = currentObject;
+        currentObject = instance;
+
+        visit(method.block());
+
+        currentObject = previous;
 
         return null;
     }

@@ -1,4 +1,4 @@
-import java.util.List;
+import java.util.*;
 
 public class ClassDef {
 	public String name;
@@ -7,6 +7,7 @@ public class ClassDef {
 	public DelphiParser.DestructorDeclContext destructor;
 	public String parentName;
 	public ClassDef parent;
+	public Map<String, DelphiParser.ProcedureDeclContext> methods;
 
 	public ClassDef(String name,
 			List<String> fields,
@@ -19,5 +20,6 @@ public class ClassDef {
 		this.constructor = constructor;
 		this.destructor = destructor;
 		this.parentName = parentName;
+		this.methods = new HashMap<>();
 	}
 }

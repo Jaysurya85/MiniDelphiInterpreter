@@ -10,7 +10,30 @@ classDecl
     ;
 
 classBody
-    : varDeclSection? constructorDecl? destructorDecl?
+    : varDeclSection? constructorDecl? destructorDecl? procedureDecl*
+    ;
+
+
+procedureDecl
+    : 'procedure' IDENTIFIER '(' ')' ';'
+      block
+      ';'
+    ;
+
+interfaceDecl
+    : 'interface' IDENTIFIER
+      'begin'
+      interfaceBody
+      'end'
+      ';'
+    ;
+
+interfaceBody
+    : procedureSignature*
+    ;
+
+procedureSignature
+    : 'procedure' IDENTIFIER '(' ')' ';'
     ;
 
 constructorDecl
