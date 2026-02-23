@@ -4,7 +4,13 @@ import org.antlr.v4.runtime.tree.*;
 public class Main {
     public static void main(String[] args) throws Exception {
 
-        CharStream input = CharStreams.fromFileName("test1.pas");
+        if (args.length == 0) {
+            System.out.println("Usage: java Main <sourcefile>");
+            return;
+        }
+
+        String filename = args[0];
+        CharStream input = CharStreams.fromFileName(filename);
 
         DelphiLexer lexer = new DelphiLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);

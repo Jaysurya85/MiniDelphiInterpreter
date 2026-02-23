@@ -6,11 +6,16 @@ begin
   begin
     age := 18;
   end;
+
+  destructor Destroy();
+  begin
+    writeln(age);
+  end;
 end;
 
 var p: Person;
 
 begin
   p := Person.Create();
-  writeln(p.age);
+  p.Destroy();
 end.

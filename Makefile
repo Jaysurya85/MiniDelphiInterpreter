@@ -19,7 +19,7 @@ compile:
 
 # -------- RUN --------
 run:
-	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main
+	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main ${file}
 
 # -------- CLEAN --------
 clean:
