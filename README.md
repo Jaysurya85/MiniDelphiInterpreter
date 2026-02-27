@@ -61,10 +61,12 @@ project_root/
 ## Test Cases (Output)
 - test1.pas (Basic Class + Constructor)
 ```
+Registered class: Person
 18
 ```
 - test2.pas (Destructor)
 ```
+Registered class: Person
 18
 ```
 - test3.pas (Inheretence)
