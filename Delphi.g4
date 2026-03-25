@@ -84,6 +84,8 @@ statement
     | methodCall ';'
     | whileStmt
     | forStmt
+    | breakStmt
+    | continueStmt
     ;
 
 assignment
@@ -100,6 +102,14 @@ whileStmt
 
 forStmt
     : 'for' IDENTIFIER ':=' expression 'to' expression 'do' block ';'
+    ;
+
+breakStmt
+    : 'break' ';'
+    ;
+
+continueStmt
+    : 'continue' ';'
     ;
 
 expression

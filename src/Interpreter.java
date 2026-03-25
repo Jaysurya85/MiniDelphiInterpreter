@@ -329,7 +329,15 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
         while (isTrue(visit(ctx.expression()))) {
             Scope previous = currentScope;
             currentScope = new Scope(previous);
-            visit(ctx.block());
+
+            try {
+                visit(ctx.block());
+            } catch (ContinueSignal e) {
+                // continue
+            } catch (BreakSignal e) {
+                currentScope = previous;
+                break;
+            }
             currentScope = previous;
         }
 
@@ -353,11 +361,28 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
             loopScope.assign(loopVar, i);
             Scope bodyScope = new Scope(loopScope);
             currentScope = bodyScope;
-            visit(ctx.block());
+            try {
+                visit(ctx.block());
+            } catch (ContinueSignal e) {
+                // continue
+            } catch (BreakSignal e) {
+                currentScope = previous;
+                return null;
+            }
             currentScope = loopScope;
         }
 
         currentScope = previous;
         return null;
+    }
+
+    @Override
+    public Object visitBreakStmt(DelphiParser.BreakStmtContext ctx) {
+        throw new BreakSignal();
+    }
+
+    @Override
+    public Object visitContinueStmt(DelphiParser.ContinueStmtContext ctx) {
+        throw new ContinueSignal();
     }
 }
