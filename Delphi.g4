@@ -82,6 +82,8 @@ statement
     : assignment
     | writelnStmt
     | methodCall ';'
+    | whileStmt
+    | forStmt
     ;
 
 assignment
@@ -90,6 +92,14 @@ assignment
 
 writelnStmt
     : 'writeln' '(' expression ')' ';'
+    ;
+
+whileStmt
+    : 'while' expression 'do' block ';'
+    ;
+
+forStmt
+    : 'for' IDENTIFIER ':=' expression 'to' expression 'do' block ';'
     ;
 
 expression
