@@ -2,7 +2,8 @@ import java.util.*;
 
 public class Interpreter extends DelphiBaseVisitor<Object> {
 
-    private Map<String, Object> memory = new HashMap<>();
+    private Scope globalScope = new Scope(null);
+    private Scope currentScope = globalScope;
     private Map<String, ClassDef> classes = new HashMap<>();
     private ObjectInstance currentObject = null;
     private Map<String, InterfaceDef> interfaces = new HashMap<>();
@@ -17,27 +18,22 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
 
             String varName = ctx.IDENTIFIER().getText();
 
-            // Global variable
-            if (memory.containsKey(varName)) {
-                memory.put(varName, value);
-            }
-            // Object field (inside constructor/destructor)
-            else if (currentObject != null &&
+            if (currentScope.contains(varName)) {
+                currentScope.assign(varName, value);
+            } else if (currentObject != null &&
                     currentObject.fields.containsKey(varName)) {
-
                 currentObject.fields.put(varName, (Integer) value);
             } else {
                 throw new RuntimeException("Unknown variable: " + varName);
             }
 
         } else {
-            // Field access: p.age := ...
             DelphiParser.FieldAccessContext fieldCtx = ctx.fieldAccess();
 
             String objectName = fieldCtx.IDENTIFIER(0).getText();
             String fieldName = fieldCtx.IDENTIFIER(1).getText();
 
-            ObjectInstance instance = (ObjectInstance) memory.get(objectName);
+            ObjectInstance instance = (ObjectInstance) currentScope.resolve(objectName);
 
             if (instance == null) {
                 throw new RuntimeException("Unknown object: " + objectName);
@@ -56,7 +52,7 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
         String objectName = ctx.IDENTIFIER(0).getText();
         String fieldName = ctx.IDENTIFIER(1).getText();
 
-        ObjectInstance instance = (ObjectInstance) memory.get(objectName);
+        ObjectInstance instance = (ObjectInstance) currentScope.resolve(objectName);
 
         if (instance == null) {
             throw new RuntimeException("Unknown object: " + objectName);
@@ -97,15 +93,12 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
 
             String varName = ctx.IDENTIFIER().getText();
 
-            // 1️⃣ Global variable
-            if (memory.containsKey(varName)) {
-                return memory.get(varName);
+            if (currentScope.contains(varName)) {
+                return currentScope.resolve(varName);
             }
 
-            // 2️⃣ Object field (constructor/destructor context)
             if (currentObject != null &&
                     currentObject.fields.containsKey(varName)) {
-
                 return currentObject.fields.get(varName);
             }
 
@@ -208,21 +201,17 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
 
         ObjectInstance instance = new ObjectInstance(classDef);
 
-        // Run constructor
-        if (classDef.constructor != null) {
-
-            ObjectInstance previous = currentObject;
-            currentObject = instance;
-
-            visit(classDef.constructor.block());
-
-            currentObject = previous;
-        }
-
         if (classDef.parent != null && classDef.parent.constructor != null) {
             ObjectInstance previous = currentObject;
             currentObject = instance;
             visit(classDef.parent.constructor.block());
+            currentObject = previous;
+        }
+
+        if (classDef.constructor != null) {
+            ObjectInstance previous = currentObject;
+            currentObject = instance;
+            visit(classDef.constructor.block());
             currentObject = previous;
         }
 
@@ -237,7 +226,7 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
         String typeName = ctx.typeName().getText();
 
         if (typeName.equals("integer")) {
-            memory.put(varName, 0);
+            currentScope.declare(varName, 0);
         } else {
             ClassDef classDef = classes.get(typeName);
 
@@ -245,7 +234,7 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
                 throw new RuntimeException("Unknown class: " + typeName);
             }
 
-            memory.put(varName, null); // will be assigned later
+            currentScope.declare(varName, null);
         }
 
         return null;
@@ -258,7 +247,7 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
         String objectName = ctx.IDENTIFIER(0).getText();
         String methodName = ctx.IDENTIFIER(1).getText();
 
-        ObjectInstance instance = (ObjectInstance) memory.get(objectName);
+        ObjectInstance instance = (ObjectInstance) currentScope.resolve(objectName);
 
         if (instance == null) {
             throw new RuntimeException("Unknown object: " + objectName);
