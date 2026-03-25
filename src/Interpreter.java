@@ -315,4 +315,49 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
 
         return null;
     }
+
+    private boolean isTrue(Object value) {
+        if (value instanceof Integer) {
+            return ((Integer) value) != 0;
+        }
+        throw new RuntimeException("Loop condition must evaluate to an integer");
+    }
+
+    @Override
+    public Object visitWhileStmt(DelphiParser.WhileStmtContext ctx) {
+
+        while (isTrue(visit(ctx.expression()))) {
+            Scope previous = currentScope;
+            currentScope = new Scope(previous);
+            visit(ctx.block());
+            currentScope = previous;
+        }
+
+        return null;
+    }
+
+    @Override
+    public Object visitForStmt(DelphiParser.ForStmtContext ctx) {
+
+        String loopVar = ctx.IDENTIFIER().getText();
+        int start = (Integer) visit(ctx.expression(0));
+        int end = (Integer) visit(ctx.expression(1));
+
+        Scope previous = currentScope;
+        Scope loopScope = new Scope(previous);
+        currentScope = loopScope;
+
+        loopScope.declare(loopVar, start);
+
+        for (int i = start; i <= end; i++) {
+            loopScope.assign(loopVar, i);
+            Scope bodyScope = new Scope(loopScope);
+            currentScope = bodyScope;
+            visit(ctx.block());
+            currentScope = loopScope;
+        }
+
+        currentScope = previous;
+        return null;
+    }
 }
