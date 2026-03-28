@@ -3,6 +3,7 @@ ANTLR_JAR = lib/antlr-4.13.1-complete.jar
 SRC_DIR = src
 BIN_DIR = bin
 GRAMMAR = grammar/Delphi.g4
+TEST_FILES = $(sort $(wildcard tests/*.pas))
 
 # -------- DEFAULT TARGET --------
 all: generate compile
@@ -10,7 +11,7 @@ all: generate compile
 # -------- GENERATE PARSER --------
 generate:
 	java -jar $(ANTLR_JAR) -visitor $(GRAMMAR)
-	mv Delphi*.java $(SRC_DIR)/
+	mv grammar/Delphi*.java $(SRC_DIR)/
 
 # -------- COMPILE --------
 compile:
@@ -22,7 +23,7 @@ run:
 	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main tests/${file}
 
 run-all:
-	@for file in tests/*.pas; do \
+	@for file in $(TEST_FILES); do \
 		echo "Running $$file"; \
 		java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main "$$file"; \
 		echo; \
@@ -32,4 +33,4 @@ run-all:
 clean:
 	rm -rf $(BIN_DIR)
 	rm -f $(SRC_DIR)/Delphi*.java
-	rm -f *.tokens *.interp
+	rm -f grammar/*.tokens grammar/*.interp
