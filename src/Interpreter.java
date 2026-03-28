@@ -8,6 +8,7 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
     private ObjectInstance currentObject = null;
     private Map<String, InterfaceDef> interfaces = new HashMap<>();
     private Map<String, ProcedureDef> procedures = new HashMap<>();
+    private Map<String, FunctionDef> functions = new HashMap<>();
 
     // ================= ASSIGNMENT =================
     @Override
@@ -418,4 +419,55 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
 
         return null;
     }
+
+    @Override
+    public Object visitFunctionDef(DelphiParser.FunctionDefContext ctx) {
+
+        String functionName = ctx.IDENTIFIER().getText();
+
+        functions.put(functionName, new FunctionDef(functionName, ctx));
+
+        return null;
+    }
+
+    public class ReturnSignal extends RuntimeException {
+
+        public final Object value;
+
+        public ReturnSignal(Object value) {
+            this.value = value;
+        }
+    }
+
+    @Override
+    public Object visitReturnStmt(DelphiParser.ReturnStmtContext ctx) {
+        Object value = visit(ctx.expression());
+        throw new ReturnSignal(value);
+    }
+
+    @Override
+    public Object visitFunctionCall(DelphiParser.FunctionCallContext ctx) {
+
+        String functionName = ctx.IDENTIFIER().getText();
+
+        FunctionDef function = functions.get(functionName);
+
+        if (function == null) {
+            throw new RuntimeException("Unknown function: " + functionName);
+        }
+
+        Scope previous = currentScope;
+        currentScope = new Scope(globalScope);
+
+        try {
+            visit(function.ctx.block());
+        } catch (ReturnSignal signal) {
+            currentScope = previous;
+            return signal.value;
+        }
+
+        currentScope = previous;
+        throw new RuntimeException("Function did not return a value: " + functionName);
+    }
+
 }

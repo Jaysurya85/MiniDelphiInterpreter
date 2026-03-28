@@ -4,10 +4,25 @@ program
     : interfaceDecl*
       classDecl*
       procedureDef*
+      functionDef*
       varDeclSection?
       block
       '.'
       EOF
+    ;
+
+functionDef
+    : 'function' IDENTIFIER '(' ')' ';'
+      block
+      ';'
+    ;
+
+functionCall
+    : IDENTIFIER '(' ')'
+    ;
+
+returnStmt
+    : 'return' expression ';'
     ;
 
 procedureDef
@@ -103,6 +118,7 @@ statement
     | forStmt
     | breakStmt
     | continueStmt
+    | returnStmt
     ;
 
 assignment
@@ -134,6 +150,7 @@ expression
     | fieldAccess
     | objectCreation
     | IDENTIFIER
+    | functionCall
     ;
 
 fieldAccess
