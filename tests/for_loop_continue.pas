@@ -2,9 +2,9 @@ var
   i: integer;
 
 begin
-  for i := 1 to 5 do
+  for i := 1 to 3 do
   begin
     writeln(i);
-    break;
+    continue;
   end;
 end.

@@ -16,13 +16,13 @@ The project demonstrates parsing, semantic validation, and runtime execution of 
 
 ```
 To clean
-make clean 
+make clean
 
-To generates all the antlr files and compiles the java files
-make 
+To generate all the ANTLR files and compile the Java files
+make
 
-To Run
-make run file=test1.pas (name of the pascal file you want to run should be in home directory) 
+To run
+make run file=test1.pas
 ```
 
 ## Project Structure
@@ -30,9 +30,11 @@ make run file=test1.pas (name of the pascal file you want to run should be in ho
 ```
 project_root/
 │
-├── Delphi.g4              # ANTLR grammar
+├── grammar/
+│   └── Delphi.g4          # ANTLR grammar
+├── lib/
+│   └── antlr-4.13.1-complete.jar
 ├── Makefile               # Build automation
-├── antlr-4.13.1-complete.jar
 │
 ├── src/
 │   ├── Main.java
@@ -44,9 +46,10 @@ project_root/
 │
 ├── bin/                   # Compiled .class files
 │
-├── test1.pas
-├── test2.pas
-├── test3.pas
+├── tests/
+│   ├── test1.pas
+│   ├── test2.pas
+│   └── test3.pas
 └── README.md
 ```
 ## Design Notes
@@ -82,5 +85,4 @@ Registered interface: Printable
 Registered class: Person
 18
 ```
-
 

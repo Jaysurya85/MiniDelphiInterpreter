@@ -1,8 +1,8 @@
 # -------- CONFIG --------
-ANTLR_JAR = antlr-4.13.1-complete.jar
+ANTLR_JAR = lib/antlr-4.13.1-complete.jar
 SRC_DIR = src
 BIN_DIR = bin
-GRAMMAR = Delphi.g4
+GRAMMAR = grammar/Delphi.g4
 
 # -------- DEFAULT TARGET --------
 all: generate compile
@@ -19,7 +19,14 @@ compile:
 
 # -------- RUN --------
 run:
-	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main ${file}
+	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main tests/${file}
+
+run-all:
+	@for file in tests/*.pas; do \
+		echo "Running $$file"; \
+		java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main "$$file"; \
+		echo; \
+	done
 
 # -------- CLEAN --------
 clean:

@@ -2,9 +2,10 @@ var
   x: integer;
 
 begin
-  x := 0;
+  x := 1;
   while x do
   begin
     writeln(x);
+    break;
   end;
 end.
