@@ -7,6 +7,7 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
     private Map<String, ClassDef> classes = new HashMap<>();
     private ObjectInstance currentObject = null;
     private Map<String, InterfaceDef> interfaces = new HashMap<>();
+    private Map<String, ProcedureDef> procedures = new HashMap<>();
 
     // ================= ASSIGNMENT =================
     @Override
@@ -384,5 +385,37 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
     @Override
     public Object visitContinueStmt(DelphiParser.ContinueStmtContext ctx) {
         throw new ContinueSignal();
+    }
+
+    @Override
+    public Object visitProcedureDef(DelphiParser.ProcedureDefContext ctx) {
+
+        String procName = ctx.IDENTIFIER().getText();
+
+        procedures.put(procName, new ProcedureDef(procName, ctx));
+
+        return null;
+    }
+
+    @Override
+    public Object visitProcedureCall(DelphiParser.ProcedureCallContext ctx) {
+
+        String procName = ctx.IDENTIFIER().getText();
+
+        ProcedureDef procedure = procedures.get(procName);
+
+        if (procedure == null) {
+            throw new RuntimeException("Unknown procedure: " + procName);
+        }
+
+        Scope previous = currentScope;
+
+        currentScope = new Scope(globalScope);
+
+        visit(procedure.ctx.block());
+
+        currentScope = previous;
+
+        return null;
     }
 }

@@ -1,7 +1,23 @@
 grammar Delphi;
 
 program
-    : interfaceDecl* classDecl* varDeclSection? block '.' EOF
+    : interfaceDecl*
+      classDecl*
+      procedureDef*
+      varDeclSection?
+      block
+      '.'
+      EOF
+    ;
+
+procedureDef
+    : 'procedure' IDENTIFIER '(' ')' ';'
+      block
+      ';'
+    ;
+
+procedureCall
+    : IDENTIFIER '(' ')' ';'
     ;
 
 classDecl
@@ -82,6 +98,7 @@ statement
     : assignment
     | writelnStmt
     | methodCall ';'
+    | procedureCall
     | whileStmt
     | forStmt
     | breakStmt
