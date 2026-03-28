@@ -392,8 +392,15 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
     public Object visitProcedureDef(DelphiParser.ProcedureDefContext ctx) {
 
         String procName = ctx.IDENTIFIER().getText();
+        List<String> params = new ArrayList<>();
 
-        procedures.put(procName, new ProcedureDef(procName, ctx));
+        if (ctx.formalParams() != null) {
+            for (var id : ctx.formalParams().IDENTIFIER()) {
+                params.add(id.getText());
+            }
+        }
+
+        procedures.put(procName, new ProcedureDef(procName, params, ctx));
 
         return null;
     }
@@ -409,9 +416,27 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
             throw new RuntimeException("Unknown procedure: " + procName);
         }
 
-        Scope previous = currentScope;
+        List<Object> argValues = new ArrayList<>();
 
+        if (ctx.actualParams() != null) {
+            for (DelphiParser.ExpressionContext expr : ctx.actualParams().expression()) {
+                argValues.add(visit(expr));
+            }
+        }
+
+        if (argValues.size() != procedure.params.size()) {
+            throw new RuntimeException(
+                    "Procedure " + procName + " expected " +
+                            procedure.params.size() + " arguments but got " +
+                            argValues.size());
+        }
+
+        Scope previous = currentScope;
         currentScope = new Scope(globalScope);
+
+        for (int i = 0; i < procedure.params.size(); i++) {
+            currentScope.declare(procedure.params.get(i), argValues.get(i));
+        }
 
         visit(procedure.ctx.block());
 
@@ -424,8 +449,15 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
     public Object visitFunctionDef(DelphiParser.FunctionDefContext ctx) {
 
         String functionName = ctx.IDENTIFIER().getText();
+        List<String> params = new ArrayList<>();
 
-        functions.put(functionName, new FunctionDef(functionName, ctx));
+        if (ctx.formalParams() != null) {
+            for (var id : ctx.formalParams().IDENTIFIER()) {
+                params.add(id.getText());
+            }
+        }
+
+        functions.put(functionName, new FunctionDef(functionName, params, ctx));
 
         return null;
     }
@@ -456,8 +488,27 @@ public class Interpreter extends DelphiBaseVisitor<Object> {
             throw new RuntimeException("Unknown function: " + functionName);
         }
 
+        List<Object> argValues = new ArrayList<>();
+
+        if (ctx.actualParams() != null) {
+            for (DelphiParser.ExpressionContext expr : ctx.actualParams().expression()) {
+                argValues.add(visit(expr));
+            }
+        }
+
+        if (argValues.size() != function.params.size()) {
+            throw new RuntimeException(
+                    "Function " + functionName + " expected " +
+                            function.params.size() + " arguments but got " +
+                            argValues.size());
+        }
+
         Scope previous = currentScope;
         currentScope = new Scope(globalScope);
+
+        for (int i = 0; i < function.params.size(); i++) {
+            currentScope.declare(function.params.get(i), argValues.get(i));
+        }
 
         try {
             visit(function.ctx.block());

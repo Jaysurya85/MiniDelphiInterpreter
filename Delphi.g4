@@ -11,14 +11,22 @@ program
       EOF
     ;
 
+formalParams
+    : IDENTIFIER (',' IDENTIFIER)*
+    ;
+
+actualParams
+    : expression (',' expression)*
+    ;
+
 functionDef
-    : 'function' IDENTIFIER '(' ')' ';'
+    : 'function' IDENTIFIER '(' formalParams? ')' ';'
       block
       ';'
     ;
 
 functionCall
-    : IDENTIFIER '(' ')'
+    : IDENTIFIER '(' actualParams? ')'
     ;
 
 returnStmt
@@ -26,13 +34,13 @@ returnStmt
     ;
 
 procedureDef
-    : 'procedure' IDENTIFIER '(' ')' ';'
+    : 'procedure' IDENTIFIER '(' formalParams? ')' ';'
       block
       ';'
     ;
 
 procedureCall
-    : IDENTIFIER '(' ')' ';'
+    : IDENTIFIER '(' actualParams? ')' ';'
     ;
 
 classDecl

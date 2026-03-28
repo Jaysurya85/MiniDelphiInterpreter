@@ -1,12 +1,14 @@
-procedure showX();
+procedure showI();
 begin
-  writeln(x);
+  writeln(i);
 end;
 
 var
-  x: integer;
+  dummy: integer;
 
 begin
-  x := 42;
-  showX();
+  for i := 1 to 1 do
+  begin
+    showI();
+  end;
 end.
