@@ -95,6 +95,9 @@ public class LLVMGenerator {
 
     public String generateProgram(ProgramNode program) {
         code.setLength(0);
+
+        code.append("@.fmt = private constant [4 x i8] c\"%d\\0A\\00\"\n");
+        code.append("declare i32 @printf(i8*, ...)\n\n");
         
         for (ProcedureDefNode procedure : program.procedures) {
             generateProcedure(procedure);
@@ -309,7 +312,10 @@ public class LLVMGenerator {
 
         if (node instanceof WriteLnNode) {
             WriteLnNode writeLn = (WriteLnNode) node;
-            generateExpr(writeLn.expression);
+            String value = generateExpr(writeLn.expression);
+            String temp = newTemp();
+            emit(temp + " = call i32 (i8*, ...) @printf(i8* getelementptr inbounds " +
+                    "([4 x i8], [4 x i8]* @.fmt, i32 0, i32 0), i32 " + value + ")");
             return;
         }
 
