@@ -34,8 +34,13 @@ public class Main {
         LLVMGenerator generator = new LLVMGenerator();
         String ir = generator.generateProgram(program);
         String outputFilename = toLlFilename(filename);
+        Path outputPath = Path.of(outputFilename);
 
-        Files.writeString(Path.of(outputFilename), ir);
+        if (outputPath.getParent() != null) {
+            Files.createDirectories(outputPath.getParent());
+        }
+
+        Files.writeString(outputPath, ir);
         System.out.println("Wrote LLVM IR to " + outputFilename);
     }
 
@@ -51,6 +56,26 @@ public class Main {
     }
 
     private static String toLlFilename(String inputFilename) {
+        if (inputFilename.contains("/tests/pas/")) {
+            String baseName = Path.of(inputFilename).getFileName().toString();
+            if (baseName.endsWith(".pas")) {
+                baseName = baseName.substring(0, baseName.length() - 4) + ".ll";
+            } else {
+                baseName = baseName + ".ll";
+            }
+            return Path.of("tests", "ll", baseName).toString();
+        }
+
+        if (inputFilename.startsWith("tests/pas/")) {
+            String baseName = Path.of(inputFilename).getFileName().toString();
+            if (baseName.endsWith(".pas")) {
+                baseName = baseName.substring(0, baseName.length() - 4) + ".ll";
+            } else {
+                baseName = baseName + ".ll";
+            }
+            return Path.of("tests", "ll", baseName).toString();
+        }
+
         if (inputFilename.endsWith(".pas")) {
             return inputFilename.substring(0, inputFilename.length() - 4) + ".ll";
         }

@@ -1,156 +1,135 @@
-# Mini Delphi Interpreter
+# Mini Delphi Compiler
 
 ## Overview
-This project implements a Mini Delphi interpreter by extending a Pascal grammar using ANTLR4 and building a Java-based interpreter that walks the generated AST.
+This project is a compiler for a Pascal/Delphi subset. It uses ANTLR4 for parsing, builds a small AST for the procedural subset, and generates LLVM IR (`.ll`) files.
 
-**The interpreter supports object-oriented features including:**
-- Classes and Objects
-- Constructors
-- Destructors
-- Methods
-- Inheritance 
-- Interfaces 
-The project demonstrates parsing, semantic validation, and runtime execution of a small object-oriented language.
+The compiler focuses on approximately 70% of the Project 2 language, specifically the procedural subset needed for LLVM generation.
 
-## How to Run
+## Supported Subset
+- integer literals
+- integer variables
+- variable declarations
+- assignments
+- arithmetic expressions: `+`, `-`, `*`, `/`
+- `while` loops
+- `for` loops
+- `break`
+- `continue`
+- global procedures
+- global functions
+- formal parameters
+- `return`
+- procedure calls
+- function calls
+- `writeln(integer)` via `printf`
 
-```
-To clean
+## Not Supported
+- classes / objects
+- constructors / destructors
+- methods
+- inheritance
+- interfaces
+- the earlier interpreter runtime
+
+## Build
+```bash
 make clean
-
-To generate all the ANTLR files and compile the Java files
 make
+```
 
-To run one test file from tests/
-make run file=basic_class_constructor.pas
+Important:
+- `make clean` removes `bin/` and `tests/ll/`
+- generated LLVM files are recreated the next time you run `make compile-ll ...` or `make compile-tests`
 
-To run all test files
-make run-all
+## Compile A Pascal File To LLVM IR
+```bash
+make compile-ll file=tests/pas/assign_writeln.pas
+```
+
+This writes the LLVM output into `tests/ll/` with the same base name:
+
+```text
+tests/pas/assign_writeln.pas -> tests/ll/assign_writeln.ll
+```
+
+You can also run the compiler directly:
+
+```bash
+java -cp ".:lib/antlr-4.13.1-complete.jar:bin" Main tests/pas/assign_writeln.pas
 ```
 
 ## Project Structure
+```text
+grammar/
+  Delphi.g4              ANTLR grammar
 
-```
-project_root/
-│
-├── grammar/
-│   └── Delphi.g4          # ANTLR grammar
-├── lib/
-│   └── antlr-4.13.1-complete.jar
-├── Makefile               # Build automation
-│
-├── src/
-│   ├── Main.java
-│   ├── Interpreter.java
-│   ├── ClassDef.java
-│   ├── ObjectInstance.java
-│   ├── InterfaceDef.java
-│   └── (generated ANTLR files)
-│
-├── bin/                   # Compiled .class files
-│
-├── tests/
-│   ├── basic_class_constructor.pas
-│   ├── class_destructor.pas
-│   ├── class_inheritance_fields.pas
-│   ├── interface_implementation.pas
-│   ├── method_call_on_object.pas
-│   ├── field_assignment_access.pas
-│   ├── for_loop_iteration.pas
-│   ├── for_loop_continue.pas
-│   ├── while_loop_with_break.pas
-│   ├── procedure_no_params.pas
-│   ├── procedure_with_params.pas
-│   ├── function_return.pas
-│   ├── function_with_params.pas
-│   ├── scope_global_variable_access.pas
-│   ├── scope_parameter_shadowing.pas
-│   ├── scope_function_parameter_shadowing.pas
-│   ├── scope_loop_variable_not_visible_in_procedure.pas
-│   └── scope_object_field_vs_global_variable.pas
-└── README.md
-```
-## Design Notes
-- The interpreter uses ANTLR’s Visitor pattern.
-- Classes are stored in a Map<String, ClassDef>.
-- Interfaces are stored in a Map<String, InterfaceDef>.
-- Objects maintain their own field map.
-- currentObject simulates this context.
-- Interface validation occurs at class declaration time.
+src/
+  Main.java              compiler entry point
+  ast/                   AST node classes and AST printer
+  frontend/              AST builder and generated ANTLR files
+  codegen/               LLVM IR generator
 
-## Project 2 Additions
-- Added support for `while` loops.
-- Added support for `for` loops.
-- Added `break` and `continue` using runtime control-flow signals.
-- Added top-level procedures with positional parameters.
-- Added top-level functions with positional parameters and `return`.
-- Added function calls inside expressions.
-- Added scenario-based tests instead of numbered test files.
-- Reorganized the repository into `grammar/`, `lib/`, `src/`, and `tests/`.
-- Updated the `Makefile` to work with the new directory structure.
-- Added `make run-all` to run the full test suite.
-
-## Bonus Work
-- Constant propagation was not implemented.
-- Formal parameter passing for procedures/functions was implemented, including correct scoping behavior for parameters.
-
-## Current Supported Features
-- Integer variable declarations and assignment
-- Object creation and field access
-- Class constructors and destructors
-- Method calls on objects
-- Single inheritance
-- Interface declaration and implementation checks
-- `while` loops
-- `for` loops
-- `break` and `continue`
-- Procedures
-- Functions
-- Return statements
-- Scope handling through nested runtime scopes
-
-
-## Test Cases (Output)
-- test1.pas (Basic Class + Constructor)
-```
-Registered class: Person
-18
-```
-- test2.pas (Destructor)
-```
-Registered class: Person
-18
-```
-- test3.pas (Inheretence)
-```
-Registered class: Person
-Registered class: Student
-18
-10
-```
-- test4.pas (Interface)
-```
-Registered interface: Printable
-Registered class: Person
-18
+tests/
+  pas/                   Pascal test cases
+  ll/                    generated LLVM IR outputs
+  archive/               older Project 1 / Project 2 test files
 ```
 
-## Current Test Suite
-- `basic_class_constructor.pas`: basic class creation and constructor execution
-- `class_destructor.pas`: destructor execution through `Destroy`
-- `class_inheritance_fields.pas`: inherited field initialization and child fields
-- `interface_implementation.pas`: interface declaration and required method implementation
-- `method_call_on_object.pas`: instance method dispatch
-- `field_assignment_access.pas`: assignment to object fields and reading them back
-- `while_loop_with_break.pas`: while-loop execution with `break`
-- `for_loop_iteration.pas`: for-loop counting behavior
-- `for_loop_continue.pas`: for-loop `continue` behavior
-- `procedure_no_params.pas`: procedure call without parameters
-- `procedure_with_params.pas`: procedure call with multiple parameters
-- `function_return.pas`: function returning a value
-- `function_with_params.pas`: function call with parameter passing
-- `scope_global_variable_access.pas`: reading a global variable inside a procedure
-- `scope_parameter_shadowing.pas`: procedure parameter shadowing a global variable
-- `scope_function_parameter_shadowing.pas`: function parameter shadowing a global variable
-- `scope_loop_variable_not_visible_in_procedure.pas`: invalid scope access from procedure to loop-local variable
-- `scope_object_field_vs_global_variable.pas`: object field lookup versus same-named global variable
+## Representative Test Cases
+- `tests/pas/assign_writeln.pas`
+- `tests/pas/procedure_param.pas`
+- `tests/pas/function_return.pas`
+- `tests/pas/while_break.pas`
+- `tests/pas/for_continue.pas`
+
+Generate their LLVM IR with:
+
+```bash
+make compile-ll file=tests/pas/assign_writeln.pas
+make compile-ll file=tests/pas/procedure_param.pas
+make compile-ll file=tests/pas/function_return.pas
+make compile-ll file=tests/pas/while_break.pas
+make compile-ll file=tests/pas/for_continue.pas
+```
+
+Generate all representative `.ll` files with:
+```bash
+make compile-tests
+```
+
+## Main Makefile Commands
+```bash
+make
+make clean
+make compile-ll file=tests/pas/assign_writeln.pas
+make compile-tests
+```
+
+## Verifying With LLVM Toolchain
+If `clang` is installed, a generated `.ll` file can be compiled and executed:
+
+```bash
+clang tests/ll/assign_writeln.ll -o /tmp/assign_writeln.out
+/tmp/assign_writeln.out
+```
+
+Expected output:
+
+```text
+5
+```
+
+## Compiler Pipeline
+```text
+Pascal source
+-> ANTLR parse tree
+-> AST
+-> LLVM IR (.ll)
+```
+
+## Demo Plan
+For the demo video:
+1. Show one Pascal source file.
+2. Run the compiler on it.
+3. Show the generated `.ll` file.
+4. Optionally compile the `.ll` with `clang` and execute it.
