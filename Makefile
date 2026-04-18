@@ -27,20 +27,20 @@ compile:
 	mkdir -p $(BIN_DIR)
 	javac -cp ".:$(ANTLR_JAR)" -d $(BIN_DIR) $$(find $(SRC_DIR) -name '*.java' | sort)
 
-# -------- RUN --------
-run:
+# -------- COMMANDS --------
+compile-ll:
 	@if [ -z "$(file)" ]; then \
-		echo "Usage: make run file=<testfile.pas>"; \
+		echo "Usage: make compile-ll file=<path/to/testfile.pas>"; \
 		exit 1; \
 	fi
-	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main tests/${file}
+	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main $(file)
 
 ast:
 	@if [ -z "$(file)" ]; then \
-		echo "Usage: make ast file=<testfile.pas>"; \
+		echo "Usage: make ast file=<path/to/testfile.pas>"; \
 		exit 1; \
 	fi
-	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main tests/${file}
+	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main $(file)
 
 expr-test:
 	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main --expr-test
@@ -92,4 +92,3 @@ clean:
 	rm -f $(SRC_DIR)/Delphi*.java
 	rm -f $(SRC_DIR)/frontend/Delphi*.java
 	rm -f grammar/*.tokens grammar/*.interp
-	rm -f .codex

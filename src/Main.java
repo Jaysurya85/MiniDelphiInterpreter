@@ -1,4 +1,7 @@
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.antlr.v4.runtime.*;
+
 public class Main {
     public static void main(String[] args) throws Exception {
 
@@ -29,7 +32,11 @@ public class Main {
         AstBuilder builder = new AstBuilder();
         ProgramNode program = (ProgramNode) builder.visit(tree);
         LLVMGenerator generator = new LLVMGenerator();
-        System.out.print(generator.generateProgram(program));
+        String ir = generator.generateProgram(program);
+        String outputFilename = toLlFilename(filename);
+
+        Files.writeString(Path.of(outputFilename), ir);
+        System.out.println("Wrote LLVM IR to " + outputFilename);
     }
 
     private static void runExprTest() {
@@ -41,5 +48,13 @@ public class Main {
         LLVMGenerator generator = new LLVMGenerator();
         generator.generateExpr(expr);
         System.out.print(generator.getCode());
+    }
+
+    private static String toLlFilename(String inputFilename) {
+        if (inputFilename.endsWith(".pas")) {
+            return inputFilename.substring(0, inputFilename.length() - 4) + ".ll";
+        }
+
+        return inputFilename + ".ll";
     }
 }
