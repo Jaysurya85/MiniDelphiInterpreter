@@ -154,11 +154,24 @@ continueStmt
     ;
 
 expression
-    : INTEGER
+    : additiveExpr
+    ;
+
+additiveExpr
+    : multiplicativeExpr (op=('+' | '-') multiplicativeExpr)*
+    ;
+
+multiplicativeExpr
+    : primaryExpr (op=('*' | '/') primaryExpr)*
+    ;
+
+primaryExpr
+    : '(' expression ')'
+    | INTEGER
     | fieldAccess
     | objectCreation
-    | IDENTIFIER
     | functionCall
+    | IDENTIFIER
     ;
 
 fieldAccess

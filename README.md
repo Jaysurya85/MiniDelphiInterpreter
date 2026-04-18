@@ -90,6 +90,10 @@ project_root/
 - Updated the `Makefile` to work with the new directory structure.
 - Added `make run-all` to run the full test suite.
 
+## Bonus Work
+- Constant propagation was not implemented.
+- Formal parameter passing for procedures/functions was implemented, including correct scoping behavior for parameters.
+
 ## Current Supported Features
 - Integer variable declarations and assignment
 - Object creation and field access
