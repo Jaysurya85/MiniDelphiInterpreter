@@ -28,8 +28,8 @@ public class Main {
 
         AstBuilder builder = new AstBuilder();
         ProgramNode program = (ProgramNode) builder.visit(tree);
-        AstPrinter printer = new AstPrinter();
-        System.out.print(printer.print(program));
+        LLVMGenerator generator = new LLVMGenerator();
+        System.out.print(generator.generateProgram(program));
     }
 
     private static void runExprTest() {

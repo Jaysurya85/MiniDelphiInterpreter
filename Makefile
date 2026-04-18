@@ -5,6 +5,7 @@ BIN_DIR = bin
 GRAMMAR = grammar/Delphi.g4
 TEST_FILES = $(sort $(wildcard tests/*.pas))
 COMPILER_TEST_FILES = $(sort $(wildcard tests/compiler_test*.pas))
+PHASE4_TEST_FILE = /tmp/phase4_test.pas
 
 # -------- DEFAULT TARGET --------
 all: generate compile
@@ -33,6 +34,13 @@ ast:
 		exit 1; \
 	fi
 	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main tests/${file}
+
+expr-test:
+	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main --expr-test
+
+phase4-test:
+	@printf 'var\n  x: integer;\n\nbegin\n  x := 2 + 3;\nend.\n' > $(PHASE4_TEST_FILE)
+	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main $(PHASE4_TEST_FILE)
 
 run-all:
 	@for file in $(COMPILER_TEST_FILES); do \
