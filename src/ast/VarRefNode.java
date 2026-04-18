@@ -1,4 +1,4 @@
-public class VarRefNode {
+public class VarRefNode extends ExprNode {
 
     public final String name;
 

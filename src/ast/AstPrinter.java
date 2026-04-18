@@ -134,14 +134,14 @@ public class AstPrinter {
         throw new RuntimeException("Unknown AST node: " + node);
     }
 
-    private void printArguments(StringBuilder builder, java.util.List<Object> arguments, int indent) {
+    private void printArguments(StringBuilder builder, java.util.List<ExprNode> arguments, int indent) {
         if (arguments.isEmpty()) {
             line(builder, indent, "Args: []");
             return;
         }
 
         line(builder, indent, "Args");
-        for (Object argument : arguments) {
+        for (ExprNode argument : arguments) {
             printNode(builder, argument, indent + 1);
         }
     }

@@ -1,8 +1,8 @@
 public class WriteLnNode {
 
-    public final Object expression;
+    public final ExprNode expression;
 
-    public WriteLnNode(Object expression) {
+    public WriteLnNode(ExprNode expression) {
         this.expression = expression;
     }
 }

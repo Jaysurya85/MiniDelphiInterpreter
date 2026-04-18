@@ -54,20 +54,20 @@ public class AstBuilder extends DelphiBaseVisitor<Object> {
             throw unsupported("Field assignment is outside the compiler subset");
         }
 
-        return new AssignNode(ctx.IDENTIFIER().getText(), visit(ctx.expression()));
+        return new AssignNode(ctx.IDENTIFIER().getText(), toExpr(visit(ctx.expression())));
     }
 
     @Override
     public Object visitWhileStmt(DelphiParser.WhileStmtContext ctx) {
-        return new WhileNode(visit(ctx.expression()), (BlockNode) visit(ctx.block()));
+        return new WhileNode(toExpr(visit(ctx.expression())), (BlockNode) visit(ctx.block()));
     }
 
     @Override
     public Object visitForStmt(DelphiParser.ForStmtContext ctx) {
         return new ForNode(
                 ctx.IDENTIFIER().getText(),
-                visit(ctx.expression(0)),
-                visit(ctx.expression(1)),
+                toExpr(visit(ctx.expression(0))),
+                toExpr(visit(ctx.expression(1))),
                 (BlockNode) visit(ctx.block()));
     }
 
@@ -109,12 +109,12 @@ public class AstBuilder extends DelphiBaseVisitor<Object> {
 
     @Override
     public Object visitReturnStmt(DelphiParser.ReturnStmtContext ctx) {
-        return new ReturnNode(visit(ctx.expression()));
+        return new ReturnNode(toExpr(visit(ctx.expression())));
     }
 
     @Override
     public Object visitWritelnStmt(DelphiParser.WritelnStmtContext ctx) {
-        return new WriteLnNode(visit(ctx.expression()));
+        return new WriteLnNode(toExpr(visit(ctx.expression())));
     }
 
     @Override
@@ -124,24 +124,24 @@ public class AstBuilder extends DelphiBaseVisitor<Object> {
 
     @Override
     public Object visitAdditiveExpr(DelphiParser.AdditiveExprContext ctx) {
-        Object expr = visit(ctx.multiplicativeExpr(0));
+        ExprNode expr = toExpr(visit(ctx.multiplicativeExpr(0)));
         for (int i = 1; i < ctx.multiplicativeExpr().size(); i++) {
             expr = new BinaryExprNode(
                     ctx.getChild((2 * i) - 1).getText(),
                     expr,
-                    visit(ctx.multiplicativeExpr(i)));
+                    toExpr(visit(ctx.multiplicativeExpr(i))));
         }
         return expr;
     }
 
     @Override
     public Object visitMultiplicativeExpr(DelphiParser.MultiplicativeExprContext ctx) {
-        Object expr = visit(ctx.primaryExpr(0));
+        ExprNode expr = toExpr(visit(ctx.primaryExpr(0)));
         for (int i = 1; i < ctx.primaryExpr().size(); i++) {
             expr = new BinaryExprNode(
                     ctx.getChild((2 * i) - 1).getText(),
                     expr,
-                    visit(ctx.primaryExpr(i)));
+                    toExpr(visit(ctx.primaryExpr(i))));
         }
         return expr;
     }
@@ -219,16 +219,23 @@ public class AstBuilder extends DelphiBaseVisitor<Object> {
         return names;
     }
 
-    private List<Object> buildArgumentList(DelphiParser.ActualParamsContext ctx) {
+    private List<ExprNode> buildArgumentList(DelphiParser.ActualParamsContext ctx) {
         if (ctx == null) {
             return Collections.emptyList();
         }
 
-        List<Object> arguments = new ArrayList<>();
+        List<ExprNode> arguments = new ArrayList<>();
         for (DelphiParser.ExpressionContext expressionCtx : ctx.expression()) {
-            arguments.add(visit(expressionCtx));
+            arguments.add(toExpr(visit(expressionCtx)));
         }
         return arguments;
+    }
+
+    private ExprNode toExpr(Object node) {
+        if (node instanceof ExprNode exprNode) {
+            return exprNode;
+        }
+        throw unsupported("Expected expression node");
     }
 
     private RuntimeException unsupported(String message) {

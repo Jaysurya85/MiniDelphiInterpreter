@@ -1,4 +1,4 @@
-public class IntLiteralNode {
+public class IntLiteralNode extends ExprNode {
 
     public final int value;
 

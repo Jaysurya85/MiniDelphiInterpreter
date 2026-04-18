@@ -2,12 +2,18 @@ import org.antlr.v4.runtime.*;
 public class Main {
     public static void main(String[] args) throws Exception {
 
-        if (args.length == 0 || args.length > 2) {
-            System.out.println("Usage: java Main <sourcefile>");
+        if (args.length == 1 && args[0].equals("--expr-test")) {
+            runExprTest();
             return;
         }
 
-        String filename = args.length == 2 ? args[1] : args[0];
+        if (args.length != 1) {
+            System.out.println("Usage: java Main <sourcefile>");
+            System.out.println("   or: java Main --expr-test");
+            return;
+        }
+
+        String filename = args[0];
         CharStream input = CharStreams.fromFileName(filename);
 
         DelphiLexer lexer = new DelphiLexer(input);
@@ -24,5 +30,16 @@ public class Main {
         ProgramNode program = (ProgramNode) builder.visit(tree);
         AstPrinter printer = new AstPrinter();
         System.out.print(printer.print(program));
+    }
+
+    private static void runExprTest() {
+        ExprNode expr = new BinaryExprNode(
+                "+",
+                new IntLiteralNode(2),
+                new IntLiteralNode(3));
+
+        LLVMGenerator generator = new LLVMGenerator();
+        generator.generateExpr(expr);
+        System.out.print(generator.getCode());
     }
 }

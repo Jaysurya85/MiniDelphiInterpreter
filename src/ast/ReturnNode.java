@@ -1,8 +1,8 @@
 public class ReturnNode {
 
-    public final Object expression;
+    public final ExprNode expression;
 
-    public ReturnNode(Object expression) {
+    public ReturnNode(ExprNode expression) {
         this.expression = expression;
     }
 }
