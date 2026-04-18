@@ -1,3 +1,5 @@
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -6,7 +8,10 @@ public class LLVMGenerator {
 
     private StringBuilder code = new StringBuilder();
     private int tempCount = 0;
+    private int labelCount = 0;
     private Map<String, String> locals = new HashMap<>();
+    private Deque<String> breakTargets = new ArrayDeque<>();
+    private Deque<String> continueTargets = new ArrayDeque<>();
     private boolean currentBlockTerminated = false;
     private boolean currentFunctionHasReturn = false;
 
@@ -14,8 +19,16 @@ public class LLVMGenerator {
         return "%t" + (tempCount++);
     }
 
+    private String newLabel(String base) {
+        return base + "_" + (labelCount++);
+    }
+
     private void emit(String line) {
         code.append("  ").append(line).append("\n");
+    }
+
+    private void emitLabel(String label) {
+        code.append(label).append(":\n");
     }
 
     public String getCode() {
@@ -177,6 +190,111 @@ public class LLVMGenerator {
         if (node instanceof ProcedureCallNode) {
             ProcedureCallNode call = (ProcedureCallNode) node;
             emit("call void @" + call.name + "(" + buildCallArgs(call.arguments) + ")");
+            return;
+        }
+
+        if (node instanceof WhileNode) {
+            WhileNode whileNode = (WhileNode) node;
+
+            String condLabel = newLabel("while_cond");
+            String bodyLabel = newLabel("while_body");
+            String endLabel = newLabel("while_end");
+
+            emit("br label %" + condLabel);
+            emitLabel(condLabel);
+
+            String condValue = generateExpr(whileNode.condition);
+            String cmpTemp = newTemp();
+            emit(cmpTemp + " = icmp ne i32 " + condValue + ", 0");
+            emit("br i1 " + cmpTemp + ", label %" + bodyLabel + ", label %" + endLabel);
+
+            emitLabel(bodyLabel);
+            breakTargets.push(endLabel);
+            continueTargets.push(condLabel);
+            currentBlockTerminated = false;
+
+            generateBlock(whileNode.body);
+
+            continueTargets.pop();
+            breakTargets.pop();
+
+            if (!currentBlockTerminated) {
+                emit("br label %" + condLabel);
+            }
+
+            emitLabel(endLabel);
+            currentBlockTerminated = false;
+            return;
+        }
+
+        if (node instanceof ForNode) {
+            ForNode forNode = (ForNode) node;
+            String ptr = locals.get(forNode.loopVariableName);
+
+            if (ptr == null) {
+                throw new RuntimeException("Unknown loop variable: " + forNode.loopVariableName);
+            }
+
+            String startVal = generateExpr(forNode.startExpr);
+            String endVal = generateExpr(forNode.endExpr);
+
+            String condLabel = newLabel("for_cond");
+            String bodyLabel = newLabel("for_body");
+            String incLabel = newLabel("for_inc");
+            String endLabel = newLabel("for_end");
+
+            emit("store i32 " + startVal + ", i32* " + ptr);
+            emit("br label %" + condLabel);
+
+            emitLabel(condLabel);
+            String currentVal = newTemp();
+            emit(currentVal + " = load i32, i32* " + ptr);
+            String cmpTemp = newTemp();
+            emit(cmpTemp + " = icmp sle i32 " + currentVal + ", " + endVal);
+            emit("br i1 " + cmpTemp + ", label %" + bodyLabel + ", label %" + endLabel);
+
+            emitLabel(bodyLabel);
+            breakTargets.push(endLabel);
+            continueTargets.push(incLabel);
+            currentBlockTerminated = false;
+
+            generateBlock(forNode.body);
+
+            continueTargets.pop();
+            breakTargets.pop();
+
+            if (!currentBlockTerminated) {
+                emit("br label %" + incLabel);
+            }
+
+            emitLabel(incLabel);
+            String loaded = newTemp();
+            emit(loaded + " = load i32, i32* " + ptr);
+            String next = newTemp();
+            emit(next + " = add i32 " + loaded + ", 1");
+            emit("store i32 " + next + ", i32* " + ptr);
+            emit("br label %" + condLabel);
+
+            emitLabel(endLabel);
+            currentBlockTerminated = false;
+            return;
+        }
+
+        if (node instanceof BreakNode) {
+            if (breakTargets.isEmpty()) {
+                throw new RuntimeException("break used outside loop");
+            }
+            emit("br label %" + breakTargets.peek());
+            currentBlockTerminated = true;
+            return;
+        }
+
+        if (node instanceof ContinueNode) {
+            if (continueTargets.isEmpty()) {
+                throw new RuntimeException("continue used outside loop");
+            }
+            emit("br label %" + continueTargets.peek());
+            currentBlockTerminated = true;
             return;
         }
 

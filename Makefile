@@ -8,6 +8,8 @@ COMPILER_TEST_FILES = $(sort $(wildcard tests/compiler_test*.pas))
 PHASE4_TEST_FILE = /tmp/phase4_test.pas
 PHASE5_PROC_TEST_FILE = /tmp/phase5_proc_test.pas
 PHASE5_FUNC_TEST_FILE = /tmp/phase5_func_test.pas
+PHASE6_WHILE_TEST_FILE = /tmp/phase6_while_test.pas
+PHASE6_FOR_TEST_FILE = /tmp/phase6_for_test.pas
 
 # -------- DEFAULT TARGET --------
 all: generate compile
@@ -40,6 +42,8 @@ ast:
 expr-test:
 	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main --expr-test
 
+all-phase: phase4-test phase5-proc-test phase5-func-test phase6-while-test phase6-for-test
+
 phase4-test:
 	@printf 'var\n  x: integer;\n\nbegin\n  x := 2 + 3;\nend.\n' > $(PHASE4_TEST_FILE)
 	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main $(PHASE4_TEST_FILE)
@@ -51,6 +55,14 @@ phase5-proc-test:
 phase5-func-test:
 	@printf 'function getVal(x);\nbegin\n  return x;\nend;\n\nbegin\n  writeln(getVal(5));\nend.\n' > $(PHASE5_FUNC_TEST_FILE)
 	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main $(PHASE5_FUNC_TEST_FILE)
+
+phase6-while-test:
+	@printf 'var\n  x: integer;\n\nbegin\n  x := 1;\n  while x do\n  begin\n    break;\n  end;\nend.\n' > $(PHASE6_WHILE_TEST_FILE)
+	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main $(PHASE6_WHILE_TEST_FILE)
+
+phase6-for-test:
+	@printf 'var\n  i: integer;\n\nbegin\n  for i := 1 to 3 do\n  begin\n    continue;\n  end;\nend.\n' > $(PHASE6_FOR_TEST_FILE)
+	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main $(PHASE6_FOR_TEST_FILE)
 
 run-all:
 	@for file in $(COMPILER_TEST_FILES); do \
