@@ -6,6 +6,8 @@ GRAMMAR = grammar/Delphi.g4
 TEST_FILES = $(sort $(wildcard tests/*.pas))
 COMPILER_TEST_FILES = $(sort $(wildcard tests/compiler_test*.pas))
 PHASE4_TEST_FILE = /tmp/phase4_test.pas
+PHASE5_PROC_TEST_FILE = /tmp/phase5_proc_test.pas
+PHASE5_FUNC_TEST_FILE = /tmp/phase5_func_test.pas
 
 # -------- DEFAULT TARGET --------
 all: generate compile
@@ -41,6 +43,14 @@ expr-test:
 phase4-test:
 	@printf 'var\n  x: integer;\n\nbegin\n  x := 2 + 3;\nend.\n' > $(PHASE4_TEST_FILE)
 	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main $(PHASE4_TEST_FILE)
+
+phase5-proc-test:
+	@printf 'procedure show(x);\nbegin\nend;\n\nbegin\n  show(10);\nend.\n' > $(PHASE5_PROC_TEST_FILE)
+	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main $(PHASE5_PROC_TEST_FILE)
+
+phase5-func-test:
+	@printf 'function getVal(x);\nbegin\n  return x;\nend;\n\nbegin\n  writeln(getVal(5));\nend.\n' > $(PHASE5_FUNC_TEST_FILE)
+	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main $(PHASE5_FUNC_TEST_FILE)
 
 run-all:
 	@for file in $(COMPILER_TEST_FILES); do \

@@ -1,4 +1,5 @@
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LLVMGenerator {
@@ -6,6 +7,8 @@ public class LLVMGenerator {
     private StringBuilder code = new StringBuilder();
     private int tempCount = 0;
     private Map<String, String> locals = new HashMap<>();
+    private boolean currentBlockTerminated = false;
+    private boolean currentFunctionHasReturn = false;
 
     private String newTemp() {
         return "%t" + (tempCount++);
@@ -67,18 +70,36 @@ public class LLVMGenerator {
             return temp;
         }
 
+        if (node instanceof FunctionCallNode) {
+            FunctionCallNode call = (FunctionCallNode) node;
+            String temp = newTemp();
+            emit(temp + " = call i32 @" + call.name + "(" + buildCallArgs(call.arguments) + ")");
+            return temp;
+        }
+
         throw new RuntimeException("Unsupported expression node: " + node.getClass().getSimpleName());
     }
 
     public String generateProgram(ProgramNode program) {
         code.setLength(0);
-        tempCount = 0;
-        locals.clear();
-
-        if (!program.procedures.isEmpty() || !program.functions.isEmpty()) {
-            throw new RuntimeException("Procedures and functions are not supported in LLVM generation yet");
+        
+        for (ProcedureDefNode procedure : program.procedures) {
+            generateProcedure(procedure);
+            code.append("\n");
         }
 
+        for (FunctionDefNode function : program.functions) {
+            generateFunction(function);
+            code.append("\n");
+        }
+
+        generateMain(program);
+
+        return code.toString();
+    }
+
+    private void generateMain(ProgramNode program) {
+        resetFunctionState();
         code.append("define i32 @main() {\n");
         code.append("entry:\n");
 
@@ -90,8 +111,6 @@ public class LLVMGenerator {
 
         emit("ret i32 0");
         code.append("}\n");
-
-        return code.toString();
     }
 
     private void generateVarDecl(VarDeclNode node) {
@@ -100,8 +119,43 @@ public class LLVMGenerator {
         emit(ptr + " = alloca i32");
     }
 
+    private void generateProcedure(ProcedureDefNode node) {
+        resetFunctionState();
+        code.append("define void @").append(node.name)
+                .append("(").append(buildParamSignature(node.parameterNames)).append(") {\n");
+        code.append("entry:\n");
+
+        setupParameters(node.parameterNames);
+        generateBlock(node.body);
+
+        if (!currentBlockTerminated) {
+            emit("ret void");
+        }
+
+        code.append("}\n");
+    }
+
+    private void generateFunction(FunctionDefNode node) {
+        resetFunctionState();
+        code.append("define i32 @").append(node.name)
+                .append("(").append(buildParamSignature(node.parameterNames)).append(") {\n");
+        code.append("entry:\n");
+
+        setupParameters(node.parameterNames);
+        generateBlock(node.body);
+
+        if (!currentFunctionHasReturn) {
+            throw new RuntimeException("Function did not return a value: " + node.name);
+        }
+
+        code.append("}\n");
+    }
+
     private void generateBlock(BlockNode block) {
         for (Object stmt : block.statements) {
+            if (currentBlockTerminated) {
+                break;
+            }
             generateStmt(stmt);
         }
     }
@@ -120,6 +174,71 @@ public class LLVMGenerator {
             return;
         }
 
+        if (node instanceof ProcedureCallNode) {
+            ProcedureCallNode call = (ProcedureCallNode) node;
+            emit("call void @" + call.name + "(" + buildCallArgs(call.arguments) + ")");
+            return;
+        }
+
+        if (node instanceof ReturnNode) {
+            ReturnNode ret = (ReturnNode) node;
+            String value = generateExpr(ret.expression);
+            emit("ret i32 " + value);
+            currentFunctionHasReturn = true;
+            currentBlockTerminated = true;
+            return;
+        }
+
+        if (node instanceof WriteLnNode) {
+            WriteLnNode writeLn = (WriteLnNode) node;
+            generateExpr(writeLn.expression);
+            return;
+        }
+
         throw new RuntimeException("Unsupported statement node: " + node.getClass().getSimpleName());
+    }
+
+    private void resetFunctionState() {
+        locals.clear();
+        tempCount = 0;
+        currentBlockTerminated = false;
+        currentFunctionHasReturn = false;
+    }
+
+    private String buildParamSignature(List<String> parameterNames) {
+        StringBuilder params = new StringBuilder();
+
+        for (int i = 0; i < parameterNames.size(); i++) {
+            if (i > 0) {
+                params.append(", ");
+            }
+            params.append("i32 %").append(parameterNames.get(i)).append("_param");
+        }
+
+        return params.toString();
+    }
+
+    private void setupParameters(List<String> parameterNames) {
+        for (String paramName : parameterNames) {
+            String ptr = "%" + paramName;
+            locals.put(paramName, ptr);
+            emit(ptr + " = alloca i32");
+            emit("store i32 %" + paramName + "_param, i32* " + ptr);
+        }
+    }
+
+    private String buildCallArgs(List<ExprNode> arguments) {
+        StringBuilder args = new StringBuilder();
+
+        for (int i = 0; i < arguments.size(); i++) {
+            if (i > 0) {
+                args.append(", ");
+            }
+
+            String value = generateExpr(arguments.get(i));
+            args.append("i32 ").append(value);
+        }
+
+        return args.toString();
     }
 }
