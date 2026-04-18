@@ -72,7 +72,6 @@ src/
 tests/
   pas/                   Pascal test cases
   ll/                    generated LLVM IR outputs
-  archive/               older Project 1 / Project 2 test files
 ```
 
 ## Representative Test Cases
