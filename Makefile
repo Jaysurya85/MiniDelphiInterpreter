@@ -6,6 +6,7 @@ GENERATED_GRAMMAR_DIR = $(SRC_DIR)/frontend/grammar
 LL_DIR = tests/ll
 OUT_DIR = tests/out
 WASM_DIR = tests/wasm
+WASM_PORT = 8080
 TEST_FILES = $(sort $(wildcard tests/pas/*.pas))
 
 all: compile
@@ -62,6 +63,16 @@ wasm-tests:
 
 run-wasm-minimal: wasm-tests
 	node -e "const fs = require('fs'); WebAssembly.instantiate(fs.readFileSync('$(WASM_DIR)/minimal_run.wasm')).then(({ instance }) => console.log(instance.exports.run()));"
+
+build-artifacts: compile-outs wasm-tests
+
+wasm-browser: wasm-tests
+	@echo "Open http://127.0.0.1:$(WASM_PORT)/"
+	cd $(WASM_DIR) && python3 -m http.server $(WASM_PORT)
+
+serve-wasm: wasm-tests
+	@echo "Open http://127.0.0.1:$(WASM_PORT)/"
+	cd $(WASM_DIR) && python3 -m http.server $(WASM_PORT)
 
 clean:
 	rm -rf $(BIN_DIR)
