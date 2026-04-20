@@ -5,6 +5,7 @@ GRAMMAR = grammar/Delphi.g4
 GENERATED_GRAMMAR_DIR = $(SRC_DIR)/frontend/grammar
 LL_DIR = tests/ll
 OUT_DIR = tests/out
+WASM_DIR = tests/wasm
 TEST_FILES = $(sort $(wildcard tests/pas/*.pas))
 
 all: compile
@@ -43,6 +44,25 @@ run-outs: compile-outs
 		"$$file" || exit 1; \
 	done
 
+wasm-file:
+	@if [ -z "$(file)" ]; then \
+		echo "Usage: make wasm-file file=tests/wasm/<file>.ll"; \
+		exit 1; \
+	fi
+	llc -march=wasm32 -filetype=obj "$(file)" -o "$(basename $(file)).o"
+	wasm-ld --no-entry --export=run "$(basename $(file)).o" -o "$(basename $(file)).wasm"
+
+wasm-tests:
+	@for file in $(WASM_DIR)/*.ll; do \
+		base=$${file%.ll}; \
+		echo "Building $$base.wasm"; \
+		llc -march=wasm32 -filetype=obj "$$file" -o "$$base.o" || exit 1; \
+		wasm-ld --no-entry --export=run "$$base.o" -o "$$base.wasm" || exit 1; \
+	done
+
+run-wasm-minimal: wasm-tests
+	node -e "const fs = require('fs'); WebAssembly.instantiate(fs.readFileSync('$(WASM_DIR)/minimal_run.wasm')).then(({ instance }) => console.log(instance.exports.run()));"
+
 clean:
 	rm -rf $(BIN_DIR)
 	rm -f $(SRC_DIR)/Delphi*.java
@@ -53,4 +73,5 @@ clean:
 	rm -f grammar/*.tokens grammar/*.interp
 	rm -rf $(LL_DIR)
 	rm -rf $(OUT_DIR)
+	rm -f $(WASM_DIR)/*.o $(WASM_DIR)/*.wasm
 	-rm -f .codex
