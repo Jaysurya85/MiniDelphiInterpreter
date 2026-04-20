@@ -3,9 +3,9 @@ grammar Delphi;
 program
     : interfaceDecl*
       classDecl*
+      varDeclSection?
       procedureDef*
       functionDef*
-      varDeclSection?
       block
       '.'
       EOF

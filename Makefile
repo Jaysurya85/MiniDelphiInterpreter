@@ -2,6 +2,9 @@ ANTLR_JAR = lib/antlr-4.13.1-complete.jar
 SRC_DIR = src
 BIN_DIR = bin
 GRAMMAR = grammar/Delphi.g4
+GENERATED_GRAMMAR_DIR = $(SRC_DIR)/frontend/grammar
+LL_DIR = tests/ll
+OUT_DIR = tests/out
 TEST_FILES = $(sort $(wildcard tests/pas/*.pas))
 
 all: compile
@@ -23,7 +26,21 @@ compile-ll: compile
 compile-tests: compile
 	@for file in $(TEST_FILES); do \
 		echo "Compiling $$file"; \
-		java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main "$$file"; \
+		java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main "$$file" || exit 1; \
+	done
+
+compile-outs: compile-tests
+	mkdir -p $(OUT_DIR)
+	@for file in $(LL_DIR)/*.ll; do \
+		base=$$(basename "$$file" .ll); \
+		echo "Building $(OUT_DIR)/$$base.out"; \
+		clang "$$file" -o "$(OUT_DIR)/$$base.out" || exit 1; \
+	done
+
+run-outs: compile-outs
+	@for file in $(OUT_DIR)/*.out; do \
+		echo "Running $$file"; \
+		"$$file" || exit 1; \
 	done
 
 clean:
@@ -31,6 +48,9 @@ clean:
 	rm -f $(SRC_DIR)/Delphi*.java
 	rm -f $(SRC_DIR)/frontend/Delphi*.java
 	rm -f $(SRC_DIR)/frontend/*.tokens $(SRC_DIR)/frontend/*.interp
+	rm -f $(GENERATED_GRAMMAR_DIR)/Delphi*.java
+	rm -f $(GENERATED_GRAMMAR_DIR)/*.tokens $(GENERATED_GRAMMAR_DIR)/*.interp
 	rm -f grammar/*.tokens grammar/*.interp
-	rm -rf tests/ll
+	rm -rf $(LL_DIR)
+	rm -rf $(OUT_DIR)
 	-rm -f .codex

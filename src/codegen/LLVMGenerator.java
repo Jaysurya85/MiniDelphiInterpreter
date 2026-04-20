@@ -10,6 +10,9 @@ public class LLVMGenerator {
     private int tempCount = 0;
     private int labelCount = 0;
     private Map<String, String> locals = new HashMap<>();
+    private Map<String, String> globals = new HashMap<>();
+    private Map<String, Integer> procedures = new HashMap<>();
+    private Map<String, Integer> functions = new HashMap<>();
     private Deque<String> breakTargets = new ArrayDeque<>();
     private Deque<String> continueTargets = new ArrayDeque<>();
     private boolean currentBlockTerminated = false;
@@ -42,11 +45,7 @@ public class LLVMGenerator {
 
         if (node instanceof VarRefNode) {
             String name = ((VarRefNode) node).name;
-            String ptr = locals.get(name);
-
-            if (ptr == null) {
-                throw new RuntimeException("Unknown variable: " + name);
-            }
+            String ptr = resolveVariablePointer(name);
 
             String temp = newTemp();
             emit(temp + " = load i32, i32* " + ptr);
@@ -85,6 +84,7 @@ public class LLVMGenerator {
 
         if (node instanceof FunctionCallNode) {
             FunctionCallNode call = (FunctionCallNode) node;
+            validateFunctionCall(call);
             String temp = newTemp();
             emit(temp + " = call i32 @" + call.name + "(" + buildCallArgs(call.arguments) + ")");
             return temp;
@@ -95,10 +95,21 @@ public class LLVMGenerator {
 
     public String generateProgram(ProgramNode program) {
         code.setLength(0);
+        globals.clear();
+        procedures.clear();
+        functions.clear();
+        labelCount = 0;
 
         code.append("@.fmt = private constant [4 x i8] c\"%d\\0A\\00\"\n");
         code.append("declare i32 @printf(i8*, ...)\n\n");
-        
+
+        generateGlobalVars(program.globalVars);
+        if (!program.globalVars.isEmpty()) {
+            code.append("\n");
+        }
+
+        registerSubprograms(program);
+
         for (ProcedureDefNode procedure : program.procedures) {
             generateProcedure(procedure);
             code.append("\n");
@@ -119,14 +130,37 @@ public class LLVMGenerator {
         code.append("define i32 @main() {\n");
         code.append("entry:\n");
 
-        for (VarDeclNode varDecl : program.globalVars) {
-            generateVarDecl(varDecl);
-        }
-
         generateBlock(program.mainBlock);
 
         emit("ret i32 0");
         code.append("}\n");
+    }
+
+    private void generateGlobalVars(List<VarDeclNode> globalVars) {
+        for (VarDeclNode varDecl : globalVars) {
+            String ptr = "@" + varDecl.name;
+            if (globals.containsKey(varDecl.name)) {
+                throw new RuntimeException("Duplicate global variable: " + varDecl.name);
+            }
+            globals.put(varDecl.name, ptr);
+            code.append(ptr).append(" = global i32 0\n");
+        }
+    }
+
+    private void registerSubprograms(ProgramNode program) {
+        for (ProcedureDefNode procedure : program.procedures) {
+            if (procedures.containsKey(procedure.name) || functions.containsKey(procedure.name)) {
+                throw new RuntimeException("Duplicate subprogram: " + procedure.name);
+            }
+            procedures.put(procedure.name, procedure.parameterNames.size());
+        }
+
+        for (FunctionDefNode function : program.functions) {
+            if (procedures.containsKey(function.name) || functions.containsKey(function.name)) {
+                throw new RuntimeException("Duplicate subprogram: " + function.name);
+            }
+            functions.put(function.name, function.parameterNames.size());
+        }
     }
 
     private void generateVarDecl(VarDeclNode node) {
@@ -164,6 +198,10 @@ public class LLVMGenerator {
             throw new RuntimeException("Function did not return a value: " + node.name);
         }
 
+        if (!currentBlockTerminated) {
+            emit("ret i32 0");
+        }
+
         code.append("}\n");
     }
 
@@ -179,11 +217,7 @@ public class LLVMGenerator {
     private void generateStmt(Object node) {
         if (node instanceof AssignNode) {
             AssignNode assign = (AssignNode) node;
-            String ptr = locals.get(assign.targetName);
-
-            if (ptr == null) {
-                throw new RuntimeException("Unknown variable: " + assign.targetName);
-            }
+            String ptr = resolveVariablePointer(assign.targetName);
 
             String value = generateExpr(assign.expression);
             emit("store i32 " + value + ", i32* " + ptr);
@@ -192,6 +226,7 @@ public class LLVMGenerator {
 
         if (node instanceof ProcedureCallNode) {
             ProcedureCallNode call = (ProcedureCallNode) node;
+            validateProcedureCall(call);
             emit("call void @" + call.name + "(" + buildCallArgs(call.arguments) + ")");
             return;
         }
@@ -232,11 +267,7 @@ public class LLVMGenerator {
 
         if (node instanceof ForNode) {
             ForNode forNode = (ForNode) node;
-            String ptr = locals.get(forNode.loopVariableName);
-
-            if (ptr == null) {
-                throw new RuntimeException("Unknown loop variable: " + forNode.loopVariableName);
-            }
+            String ptr = resolveVariablePointer(forNode.loopVariableName);
 
             String startVal = generateExpr(forNode.startExpr);
             String endVal = generateExpr(forNode.endExpr);
@@ -364,5 +395,43 @@ public class LLVMGenerator {
         }
 
         return args.toString();
+    }
+
+    private String resolveVariablePointer(String name) {
+        String ptr = locals.get(name);
+        if (ptr != null) {
+            return ptr;
+        }
+
+        ptr = globals.get(name);
+        if (ptr != null) {
+            return ptr;
+        }
+
+        throw new RuntimeException("Unknown variable: " + name);
+    }
+
+    private void validateProcedureCall(ProcedureCallNode call) {
+        Integer expectedCount = procedures.get(call.name);
+        if (expectedCount == null) {
+            throw new RuntimeException("Unknown procedure: " + call.name);
+        }
+
+        if (call.arguments.size() != expectedCount) {
+            throw new RuntimeException("Procedure " + call.name + " expects " +
+                    expectedCount + " arguments but got " + call.arguments.size());
+        }
+    }
+
+    private void validateFunctionCall(FunctionCallNode call) {
+        Integer expectedCount = functions.get(call.name);
+        if (expectedCount == null) {
+            throw new RuntimeException("Unknown function: " + call.name);
+        }
+
+        if (call.arguments.size() != expectedCount) {
+            throw new RuntimeException("Function " + call.name + " expects " +
+                    expectedCount + " arguments but got " + call.arguments.size());
+        }
     }
 }

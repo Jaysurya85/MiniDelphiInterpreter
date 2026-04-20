@@ -117,18 +117,3 @@ Expected output:
 ```text
 5
 ```
-
-## Compiler Pipeline
-```text
-Pascal source
--> ANTLR parse tree
--> AST
--> LLVM IR (.ll)
-```
-
-## Demo Plan
-For the demo video:
-1. Show one Pascal source file.
-2. Run the compiler on it.
-3. Show the generated `.ll` file.
-4. Optionally compile the `.ll` with `clang` and execute it.
