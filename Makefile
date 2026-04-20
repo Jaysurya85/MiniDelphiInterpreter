@@ -64,13 +64,31 @@ wasm-tests:
 run-wasm-minimal: wasm-tests
 	node -e "const fs = require('fs'); WebAssembly.instantiate(fs.readFileSync('$(WASM_DIR)/minimal_run.wasm')).then(({ instance }) => console.log(instance.exports.run()));"
 
-build-artifacts: compile-outs wasm-tests
+compiler-wasm-demo: compile
+	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main tests/pas/wasm_run.pas
+	mkdir -p $(WASM_DIR)
+	llc -march=wasm32 -filetype=obj $(LL_DIR)/wasm_run.ll -o $(WASM_DIR)/wasm_run.o
+	wasm-ld --no-entry --export=run $(WASM_DIR)/wasm_run.o -o $(WASM_DIR)/wasm_run.wasm
 
-wasm-browser: wasm-tests
+run-compiler-wasm-demo: compiler-wasm-demo
+	node -e "const fs = require('fs'); WebAssembly.instantiate(fs.readFileSync('$(WASM_DIR)/wasm_run.wasm')).then(({ instance }) => console.log(instance.exports.run()));"
+
+compiler-wasm-print-demo: compile
+	java -cp ".:$(ANTLR_JAR):$(BIN_DIR)" Main --wasm tests/pas/wasm_print.pas
+	mkdir -p $(WASM_DIR)
+	llc -march=wasm32 -filetype=obj $(LL_DIR)/wasm_print.ll -o $(WASM_DIR)/wasm_print.o
+	wasm-ld --no-entry --export=run --allow-undefined $(WASM_DIR)/wasm_print.o -o $(WASM_DIR)/wasm_print.wasm
+
+run-compiler-wasm-print-demo: compiler-wasm-print-demo
+	node -e "const fs = require('fs'); const imports = { env: { print_i32: value => console.log('print_i32:', value) } }; WebAssembly.instantiate(fs.readFileSync('$(WASM_DIR)/wasm_print.wasm'), imports).then(({ instance }) => console.log('run():', instance.exports.run()));"
+
+build-artifacts: compile-outs wasm-tests compiler-wasm-demo compiler-wasm-print-demo
+
+wasm-browser: wasm-tests compiler-wasm-print-demo
 	@echo "Open http://127.0.0.1:$(WASM_PORT)/"
 	cd $(WASM_DIR) && python3 -m http.server $(WASM_PORT)
 
-serve-wasm: wasm-tests
+serve-wasm: wasm-tests compiler-wasm-print-demo
 	@echo "Open http://127.0.0.1:$(WASM_PORT)/"
 	cd $(WASM_DIR) && python3 -m http.server $(WASM_PORT)
 

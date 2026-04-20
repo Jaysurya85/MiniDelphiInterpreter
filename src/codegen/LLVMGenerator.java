@@ -17,6 +17,15 @@ public class LLVMGenerator {
     private Deque<String> continueTargets = new ArrayDeque<>();
     private boolean currentBlockTerminated = false;
     private boolean currentFunctionHasReturn = false;
+    private final boolean wasmMode;
+
+    public LLVMGenerator() {
+        this(false);
+    }
+
+    public LLVMGenerator(boolean wasmMode) {
+        this.wasmMode = wasmMode;
+    }
 
     private String newTemp() {
         return "%t" + (tempCount++);
@@ -100,8 +109,13 @@ public class LLVMGenerator {
         functions.clear();
         labelCount = 0;
 
-        code.append("@.fmt = private constant [4 x i8] c\"%d\\0A\\00\"\n");
-        code.append("declare i32 @printf(i8*, ...)\n\n");
+        if (wasmMode) {
+            code.append("target triple = \"wasm32-unknown-unknown\"\n");
+            code.append("declare void @print_i32(i32)\n\n");
+        } else {
+            code.append("@.fmt = private constant [4 x i8] c\"%d\\0A\\00\"\n");
+            code.append("declare i32 @printf(i8*, ...)\n\n");
+        }
 
         generateGlobalVars(program.globalVars);
         if (!program.globalVars.isEmpty()) {
@@ -344,9 +358,13 @@ public class LLVMGenerator {
         if (node instanceof WriteLnNode) {
             WriteLnNode writeLn = (WriteLnNode) node;
             String value = generateExpr(writeLn.expression);
-            String temp = newTemp();
-            emit(temp + " = call i32 (i8*, ...) @printf(i8* getelementptr inbounds " +
-                    "([4 x i8], [4 x i8]* @.fmt, i32 0, i32 0), i32 " + value + ")");
+            if (wasmMode) {
+                emit("call void @print_i32(i32 " + value + ")");
+            } else {
+                String temp = newTemp();
+                emit(temp + " = call i32 (i8*, ...) @printf(i8* getelementptr inbounds " +
+                        "([4 x i8], [4 x i8]* @.fmt, i32 0, i32 0), i32 " + value + ")");
+            }
             return;
         }
 

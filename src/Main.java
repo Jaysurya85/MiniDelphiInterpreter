@@ -10,13 +10,21 @@ public class Main {
             return;
         }
 
-        if (args.length != 1) {
+        boolean wasmMode = false;
+        String filename;
+
+        if (args.length == 2 && args[0].equals("--wasm")) {
+            wasmMode = true;
+            filename = args[1];
+        } else if (args.length == 1) {
+            filename = args[0];
+        } else {
             System.out.println("Usage: java Main <sourcefile>");
+            System.out.println("   or: java Main --wasm <sourcefile>");
             System.out.println("   or: java Main --expr-test");
             return;
         }
 
-        String filename = args[0];
         CharStream input = CharStreams.fromFileName(filename);
 
         DelphiLexer lexer = new DelphiLexer(input);
@@ -31,7 +39,7 @@ public class Main {
 
         AstBuilder builder = new AstBuilder();
         ProgramNode program = (ProgramNode) builder.visit(tree);
-        LLVMGenerator generator = new LLVMGenerator();
+        LLVMGenerator generator = new LLVMGenerator(wasmMode);
         String ir = generator.generateProgram(program);
         String outputFilename = toLlFilename(filename);
         Path outputPath = Path.of(outputFilename);
